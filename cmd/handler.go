@@ -14,10 +14,6 @@ type profileHandler struct {
 	tk TokenInterface
 }
 
-func NewProfile(rd AuthInterface, tk TokenInterface) *profileHandler {
-	return &profileHandler{rd, tk}
-}
-
 type User struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`
@@ -28,6 +24,15 @@ type Todo struct {
 	UserID string `json:"user_id"`
 	Title  string `json:"title"`
 	Body   string `json:"body"`
+}
+
+var (
+	// FIXME env'i problem yapiyor, problemi cozdukten sonra bunu da guncelle (env den cek)
+	apiSecret = "cok_gizli_bunu_bilen_user_register_eder"
+)
+
+func NewProfile(rd AuthInterface, tk TokenInterface) *profileHandler {
+	return &profileHandler{rd, tk}
 }
 
 func (h *profileHandler) Login(c *gin.Context) {
@@ -120,25 +125,33 @@ func (h *profileHandler) ReturnIdentity(c *gin.Context) {
 
 func (h *profileHandler) CreateAccount(c *gin.Context) {
 	var u User
+
+	// FIXME bunu func. un icinde okumak lazim disarida tanimlaninca null oluyor (godotenv race condition ?)
+	// apiSecret := os.Getenv("API_SECRET")
+
 	if err := c.ShouldBindJSON(&u); err != nil {
 		c.JSON(http.StatusUnprocessableEntity, "Invalid json provided")
 		return
 	}
-	if u.Password != "cok_gizli_bunu_bilen_user_register_eder" {
+
+	if u.Password != apiSecret {
 		c.JSON(http.StatusUnauthorized, "You better get that secret! Youre not allowed in here!")
 		return
 	}
+
 	u.ID = uuid.NewV4().String()
 	ts, err := h.tk.CreateToken(u.ID, u.Username)
 	if err != nil {
 		c.JSON(http.StatusUnprocessableEntity, err.Error())
 		return
 	}
+
 	saveErr := h.rd.CreateAuth(u.ID, u.Username, ts)
 	if saveErr != nil {
 		c.JSON(http.StatusUnprocessableEntity, saveErr.Error())
 		return
 	}
+
 	tokens := map[string]string{
 		"access_token": ts.AccessToken,
 		// "refresh_token": ts.RefreshToken,

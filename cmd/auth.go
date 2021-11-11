@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"os"
 	"time"
 
 	"github.com/zemirco/couchdb"
@@ -14,16 +13,23 @@ type AuthInterface interface {
 	DeleteTokens(*AccessDetails) error
 }
 
-type service struct {
+// TODO client neden servicenin icinde ?
+
+type Service struct {
 	client *couchdb.Client
 }
 
-var _ AuthInterface = &service{}
+var (
+	_ AuthInterface = &Service{}
+	// FIXME
+	// dbName               = os.Getenv("DB_NAME")
+	// env den cekince null oluyor (race condition ?)
+	dbName = "bulutzincir"
+)
 
-var databaseName = os.Getenv("DATABASE_NAME")
+func NewAuth(client *couchdb.Client) *Service {
 
-func NewAuth(client *couchdb.Client) *service {
-	return &service{client: client}
+	return &Service{client: client}
 }
 
 type AccessDetails struct {
@@ -45,22 +51,24 @@ type saveDetails struct {
 	Uuid      string        `json:"_id"`
 	TokenType string        `json:"type"`
 	UserId    string        `json:"userId"`
-	UserName  string        `json:"Username`
+	Username  string        `json:"username"`
 	Expires   time.Duration `json:"AtExpires"`
 }
 
 //Save token metadata to Redis
-func (tk *service) CreateAuth(userId string, userName string, td *TokenDetails) error {
+// TODO Create Auth ne demek ?
+func (tk *Service) CreateAuth(userId string, userName string, td *TokenDetails) error {
 	at := time.Unix(td.AtExpires, 0) //converting Unix to UTC(to Time object)
 	// rt := time.Unix(td.RtExpires, 0)
 	now := time.Now()
 
-	db := tk.client.Use("bulutzincir")
+	db := tk.client.Use(dbName)
+
 	atCreated := &saveDetails{
 		Uuid:      td.TokenUuid,
 		TokenType: "access",
 		UserId:    userId,
-		UserName:  userName,
+		Username:  userName,
 		Expires:   at.Sub(now),
 	}
 	_, err := db.Post(atCreated)
@@ -81,9 +89,9 @@ func (tk *service) CreateAuth(userId string, userName string, td *TokenDetails) 
 }
 
 //Check the metadata saved
-func (tk *service) FetchAuth(tokenUuid string) (string, error) {
+func (tk *Service) FetchAuth(tokenUuid string) (string, error) {
 	// userid, err := tk.client.Get(tokenUuid).Result()
-	db := tk.client.Use("bulutzincir")
+	db := tk.client.Use(dbName)
 	pulled := &saveDetails{}
 
 	if err := db.Get(pulled, tokenUuid); err != nil {
@@ -93,11 +101,11 @@ func (tk *service) FetchAuth(tokenUuid string) (string, error) {
 }
 
 //Once a user row in the token table
-func (tk *service) DeleteTokens(authD *AccessDetails) error {
+func (tk *Service) DeleteTokens(authD *AccessDetails) error {
 	//get the refresh uuid
 	// refreshUuid := fmt.Sprintf("%s++%s", authD.TokenUuid, authD.UserId)
 	//delete access token
-	db := tk.client.Use("bulutzincir")
+	db := tk.client.Use(dbName)
 
 	access := &saveDetails{Uuid: authD.TokenUuid}
 	if _, err := db.Delete(access); err != nil {

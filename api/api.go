@@ -16,13 +16,17 @@ import (
 )
 
 func Gin() {
+	dbUrl := os.Getenv("DB_URL")
+	couchDbUrl, err := url.Parse(dbUrl)
 
-	u, err := url.Parse("http://127.0.0.1:5984/")
 	if err != nil {
 		panic(err)
 	}
 
-	client, err := couchdb.NewAuthClient("admin", "qwer", u)
+	dbUser := os.Getenv("DB_USER")
+	dbUserPassword := os.Getenv("DB_USER_PW")
+
+	client, err := couchdb.NewAuthClient(dbUser, dbUserPassword, couchDbUrl)
 	if err != nil {
 		panic(err)
 	}

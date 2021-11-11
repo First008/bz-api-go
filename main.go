@@ -2,18 +2,19 @@ package main
 
 import (
 	"bulutzincir/api"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	//inits.Init()
-	api.Gin()
-
-}
-func init() {
 	if err := godotenv.Load(); err != nil {
 		log.Print("No .env file found")
 	}
+
+	fmt.Println(os.Environ())
+
+	api.Gin()
 }
