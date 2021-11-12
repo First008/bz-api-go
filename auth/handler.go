@@ -1,4 +1,4 @@
-package cmd
+package auth
 
 import (
 	"fmt"
@@ -9,7 +9,9 @@ import (
 )
 
 // ProfileHandler struct
-type profileHandler struct {
+// ProfileHandler nedir ?
+
+type ProfileHandler struct {
 	rd AuthInterface
 	tk TokenInterface
 }
@@ -31,19 +33,18 @@ var (
 	apiSecret = "cok_gizli_bunu_bilen_user_register_eder"
 )
 
-func NewProfile(rd AuthInterface, tk TokenInterface) *profileHandler {
-	return &profileHandler{rd, tk}
+func NewProfile(rd AuthInterface, tk TokenInterface) *ProfileHandler {
+	return &ProfileHandler{rd, tk}
 }
 
-func (h *profileHandler) Login(c *gin.Context) {
+func (h *ProfileHandler) Login(c *gin.Context) {
 	var u User
 	if err := c.ShouldBindJSON(&u); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, "Invalid json provided")
+		c.JSON(http.StatusUnprocessableEntity, `{"message": "Invalid json provided"}`)
 		return
 	}
 
 	if _, ok := h.rd.FetchAuth(u.ID); ok == nil {
-		//do something here
 
 		c.JSON(http.StatusUnauthorized, fmt.Sprintf("deneme %s", ok))
 		return
@@ -65,7 +66,8 @@ func (h *profileHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, tokens)
 }
 
-func (h *profileHandler) Logout(c *gin.Context) {
+// tokeni silmek yerine tokeni invalid yapmak daha mantikli olabilir (blacklist)
+func (h *ProfileHandler) Logout(c *gin.Context) {
 	//If metadata is passed and the tokens valid, delete them from the redis store
 	metadata, _ := h.tk.ExtractTokenMetadata(c.Request)
 
@@ -79,7 +81,7 @@ func (h *profileHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, "Successfully logged out")
 }
 
-func (h *profileHandler) CreateTodo(c *gin.Context) {
+func (h *ProfileHandler) CreateTodo(c *gin.Context) {
 	var td Todo
 	if err := c.ShouldBindJSON(&td); err != nil {
 		c.JSON(http.StatusUnprocessableEntity, "invalid json")
@@ -102,7 +104,7 @@ func (h *profileHandler) CreateTodo(c *gin.Context) {
 	c.JSON(http.StatusCreated, td)
 }
 
-func (h *profileHandler) ReturnIdentity(c *gin.Context) {
+func (h *ProfileHandler) ReturnIdentity(c *gin.Context) {
 	var id User
 
 	metadata, err := h.tk.ExtractTokenMetadata(c.Request)
@@ -123,7 +125,7 @@ func (h *profileHandler) ReturnIdentity(c *gin.Context) {
 	c.JSON(http.StatusOK, id)
 }
 
-func (h *profileHandler) CreateAccount(c *gin.Context) {
+func (h *ProfileHandler) CreateAccount(c *gin.Context) {
 	var u User
 
 	// FIXME bunu func. un icinde okumak lazim disarida tanimlaninca null oluyor (godotenv race condition ?)

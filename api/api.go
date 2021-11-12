@@ -1,7 +1,8 @@
 package api
 
 import (
-	"bulutzincir/cmd"
+	"bulutzincir/auth"
+
 	"context"
 	"fmt"
 	"log"
@@ -34,30 +35,29 @@ func Gin() {
 	port := ":" + os.Getenv("PORT")
 	fmt.Println(port)
 
-	var db = cmd.NewAuth(client)
-	var tk = cmd.NewToken()
-	var service = cmd.NewProfile(db, tk)
+	var db = auth.NewAuth(client)
+	var tk = auth.NewToken()
+	var service = auth.NewProfile(db, tk)
 
 	var router = gin.Default()
 
 	router.GET("/login", service.Login)
-	router.POST("/todo", cmd.TokenAuthMiddleware(), service.CreateTodo)
+	router.POST("/todo", auth.TokenAuthMiddleware(), service.CreateTodo)
 	router.POST("/register", service.CreateAccount)
-	router.POST("/logout", cmd.TokenAuthMiddleware(), service.Logout)
-	router.GET("/whoami", cmd.TokenAuthMiddleware(), service.ReturnIdentity)
-	// router.POST("/refresh", service.Refresh)
+	router.POST("/logout", auth.TokenAuthMiddleware(), service.Logout)
+	router.GET("/whoami", auth.TokenAuthMiddleware(), service.ReturnIdentity)
 
-	srv := &http.Server{
+	server := &http.Server{
 		Addr:    port,
 		Handler: router,
 	}
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("listen: %s\n", err)
 		}
 	}()
 
-	//Wait for interrupt signal to gracefully shutdown the server with a timeout of 10 seconds
+	// Wait for interrupt signal to gracefully shutdown the server with a timeout of 10 seconds
 	quit := make(chan os.Signal)
 	signal.Notify(quit, os.Interrupt)
 	<-quit
@@ -65,8 +65,9 @@ func Gin() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := server.Shutdown(ctx); err != nil {
 		log.Fatal("Server Shutdown:", err)
 	}
+
 	log.Println("Server exiting")
 }

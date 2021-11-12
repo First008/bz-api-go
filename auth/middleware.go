@@ -1,4 +1,4 @@
-package cmd
+package auth
 
 import (
 	"net/http"
@@ -6,11 +6,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// TODO bunu project globali olarak kullanabilirmiyiz ?
+
 func TokenAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		err := TokenValid(c.Request)
+		err := isTokenValid(c.Request)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, "unauthorized")
+			c.JSON(http.StatusUnauthorized, ` {"message": "unauthorised"}`)
 			c.Abort()
 			return
 		}

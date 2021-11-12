@@ -1,4 +1,4 @@
-package cmd
+package auth
 
 import (
 	"time"
@@ -6,6 +6,7 @@ import (
 	"github.com/zemirco/couchdb"
 )
 
+// Functionlar daha iyi isimlendirilebilir
 type AuthInterface interface {
 	CreateAuth(string, string, *TokenDetails) error
 	FetchAuth(string) (string, error)
@@ -13,7 +14,7 @@ type AuthInterface interface {
 	DeleteTokens(*AccessDetails) error
 }
 
-// TODO client neden servicenin icinde ?
+// TODO client neden Servicenin icinde ?
 
 type Service struct {
 	client *couchdb.Client
@@ -28,7 +29,6 @@ var (
 )
 
 func NewAuth(client *couchdb.Client) *Service {
-
 	return &Service{client: client}
 }
 
@@ -46,35 +46,37 @@ type TokenDetails struct {
 	AtExpires    int64
 	RtExpires    int64
 }
+
 type saveDetails struct {
 	couchdb.Document
 	Uuid      string        `json:"_id"`
 	TokenType string        `json:"type"`
 	UserId    string        `json:"userId"`
 	Username  string        `json:"username"`
-	Expires   time.Duration `json:"AtExpires"`
+	Expires   time.Duration `json:"atExpires"`
 }
 
-//Save token metadata to Redis
 // TODO Create Auth ne demek ?
-func (tk *Service) CreateAuth(userId string, userName string, td *TokenDetails) error {
-	at := time.Unix(td.AtExpires, 0) //converting Unix to UTC(to Time object)
+// Save token metadata to Redis
+func (tk *Service) CreateAuth(userId string, username string, tokenDetails *TokenDetails) error {
+	//converting Unix to UTC(to Time object)
+	at := time.Unix(tokenDetails.AtExpires, 0)
 	// rt := time.Unix(td.RtExpires, 0)
 	now := time.Now()
-
 	db := tk.client.Use(dbName)
 
 	atCreated := &saveDetails{
-		Uuid:      td.TokenUuid,
+		Uuid:      tokenDetails.TokenUuid,
 		TokenType: "access",
 		UserId:    userId,
-		Username:  userName,
+		Username:  username,
 		Expires:   at.Sub(now),
 	}
 	_, err := db.Post(atCreated)
 	if err != nil {
 		return err
 	}
+
 	// rtCreated := &saveDetails{
 	// 	Uuid:      td.RefreshUuid,
 	// 	TokenType: "refresh",
