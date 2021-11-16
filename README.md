@@ -2,10 +2,10 @@
 
 - ## [Auth doc](./docs)
 
-```go mod init bulutzincir```
+## Building
 
+```$
+$ go mod tidy
+$ go build .
+```
 
-```go mod tidy```
-
-
-```go mod vendor```

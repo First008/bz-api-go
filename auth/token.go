@@ -1,4 +1,4 @@
-package cmd
+package auth
 
 import (
 	"errors"
@@ -23,19 +23,14 @@ type TokenInterface interface {
 	ExtractTokenMetadata(*http.Request) (*AccessDetails, error)
 }
 
-//Token implements the TokenInterface
-var _ TokenInterface = &tokenservice{}
-
 func (t *tokenservice) CreateToken(userId string, userName string) (*TokenDetails, error) {
 	td := &TokenDetails{}
+	// FIXME 30 saniye kisa bir hafta gibi bir sure olmasi lazim
 	td.AtExpires = time.Now().Add(time.Minute * 30).Unix() //expires after 30 min
 	td.TokenUuid = uuid.NewV4().String()
 
-	// REFRESH ---
-	// td.RtExpires = time.Now().Add(time.Hour * 24 * 7).Unix()
-	// td.RefreshUuid = td.TokenUuid + "++" + userId
-
 	var err error
+
 	//Creating Access Token
 	atClaims := jwt.MapClaims{}
 	atClaims["access_uuid"] = td.TokenUuid
@@ -48,24 +43,10 @@ func (t *tokenservice) CreateToken(userId string, userName string) (*TokenDetail
 		return nil, err
 	}
 
-	// //Creating Refresh Token
-	// td.RtExpires = time.Now().Add(time.Hour * 24 * 7).Unix()
-	// td.RefreshUuid = td.TokenUuid + "++" + userId
-
-	// rtClaims := jwt.MapClaims{}
-	// rtClaims["refresh_uuid"] = td.RefreshUuid
-	// rtClaims["user_id"] = userId
-	// rtClaims["exp"] = td.RtExpires
-	// rt := jwt.NewWithClaims(jwt.SigningMethodHS256, rtClaims)
-
-	// td.RefreshToken, err = rt.SignedString([]byte(os.Getenv("REFRESH_SECRET")))
-	// if err != nil {
-	// 	return nil, err
-	// }
 	return td, nil
 }
 
-func TokenValid(r *http.Request) error {
+func isTokenValid(r *http.Request) error {
 	token, err := verifyToken(r)
 	if err != nil {
 		return err
@@ -90,7 +71,7 @@ func verifyToken(r *http.Request) (*jwt.Token, error) {
 	return token, nil
 }
 
-//get the token from the request body
+// Get the token from the request body
 func extractToken(r *http.Request) string {
 	bearToken := r.Header.Get("Authorization")
 	strArr := strings.Split(bearToken, " ")
